@@ -66,10 +66,6 @@
 #define CONFIG_WIFI_SSID        "Alho_Home"
 #define CONFIG_WIFI_PASSWORD    "P!nn@pl#"
 
-#define BUTTON	GPIO_NUM_0
-#define BUTTON_4 GPIO_NUM_4
-#define TOPICO_TEMPERATURA      "OPANDAMENTO/1/192.168.0.10"
-
 /**
  * Variáveis Globais
  */
@@ -77,7 +73,6 @@ static const char *TAG = "main: ";
 static EventGroupHandle_t wifi_event_group;
 static EventGroupHandle_t mqtt_event_group;
 const static int CONNECTED_BIT = BIT0;
-QueueHandle_t Queue_Button;
 esp_mqtt_client_handle_t client;
 
 /**
@@ -85,7 +80,7 @@ esp_mqtt_client_handle_t client;
  */
 static esp_err_t wifi_event_handler( void *ctx, system_event_t *event );
 static void wifi_init_sta( void );
-void task_button( void *pvParameter );
+
 void app_main( void );
 
 /**
@@ -279,174 +274,6 @@ static void wifi_init_sta( void )
 
 }
 
-
-/**
- * Task responsável pela manipulação
- */
-#define FUNCIONANDO 0
-#define PARADA 1
-
-uint8_t statusMaquina = FUNCIONANDO;
-            
-void task_button( void *pvParameter )
-{
-    char str[20]; 
-    int aux = 0;
-  	int counter = 1;
-    
-      /**
-       * Configuração da GPIO BUTTON;
-       */
-  	gpio_pad_select_gpio( BUTTON );	
-    gpio_set_direction( BUTTON, GPIO_MODE_INPUT );
-  	gpio_set_pull_mode( BUTTON, GPIO_PULLUP_ONLY ); 
-
-    // Configura botão no GPIO_4
-    gpio_pad_select_gpio( BUTTON_4 );	
-    gpio_set_direction( BUTTON_4, GPIO_MODE_INPUT );
-  	gpio_set_pull_mode( BUTTON_4, GPIO_PULLUP_ONLY ); 
-
-    for(;;) 
-	  {
-
-		/**
-		 * Enquanto o ESP32 estiver conectado a rede WiFi será realizada a leitura
-		 * de button;
-		 */
-	    xEventGroupWaitBits(mqtt_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
-		
-		/**
-		 * Botaõ pressionado?
-		 */
-		if( gpio_get_level( BUTTON ) == 0 && aux == 0 )
-		{ 
-		  	/**
-		  	 * Aguarda 80 ms devido o bounce;
-		  	 */
-			vTaskDelay( 80/portTICK_PERIOD_MS );	
-		  
-			/**
-			 * Verifica se realmente button está pressionado;
-			 */
-			if( gpio_get_level( BUTTON ) == 0 && aux == 0 ) 
-			{		
-
-		        if( DEBUG )
-		            ESP_LOGI( TAG, "Button %d Pressionado .\r\n", BUTTON );
-
-						//sprintf( str, "{\"value\":%d}", counter ); 
-  
-            /*
-             * O bloco OPANDAMENTO/1/192.168.0.10 já está no define TOPICO_TEMPERATURA
-             */            
-            sprintf( str,"17631_%d_82800_%d_0_CAROK_1",counter,statusMaquina);			
-
-						/**
-						 * Publica em TOPICO_TEMPERATURA o valor de counter com QoS 0 sem retenção;
-						 */
-				if( esp_mqtt_client_publish( client, TOPICO_TEMPERATURA, str, strlen( str ), 0, 0 ) == 0 )
-		        {
-
-		          if( DEBUG )
-		            ESP_LOGI( TAG, "MSG: %s .\r\n",str);
-		            
-		          counter++;
-		        }	
-						
-						aux = 1; 
-					}
-				}
-
-		/**
-		 * Botão solto?
-		 */
-		if( gpio_get_level( BUTTON ) == 1 && aux == 1 )
-		{
-		    vTaskDelay( 80/portTICK_PERIOD_MS );	
-			
-  			if(gpio_get_level( BUTTON ) == 1 && aux == 1 )
-  			{
-  				aux = 0;
-  			}
-		}	
-    //////////////////////////////////////////////////////////////
-    // BLOCO PARA O BOTÃO NO GPIO-4
-    //////////////////////////////////////////////////////////////
-    /**
-		 * Botaõ pressionado?
-		 */
-		if( gpio_get_level( BUTTON_4 ) == 0 && aux == 0 )
-		{ 
-		  	/**
-		  	 * Aguarda 80 ms devido o bounce;
-		  	 */
-			vTaskDelay( 80/portTICK_PERIOD_MS );	
-		  
-			/**
-			 * Verifica se realmente button está pressionado;
-			 */
-			if( gpio_get_level( BUTTON_4 ) == 0 && aux == 0 ) 
-			{		
-
-		        if( DEBUG )
-		            ESP_LOGI( TAG, "Button %d Pressionado .\r\n", BUTTON_4 );
-
-						//sprintf( str, "{\"value\":%d}", counter ); 
-
-            // Inverte o status da maquina
-            if(statusMaquina == FUNCIONANDO){
-                statusMaquina = PARADA;
-            }
-            else{
-                statusMaquina = FUNCIONANDO;
-            }
-
-            /*
-             * O bloco OPANDAMENTO/1/192.168.0.10 já está no define TOPICO_TEMPERATURA
-             */            
-            sprintf( str,"17631_%d_82800_%d_0_CAROK_1_",counter,statusMaquina);			
-
-						/**
-						 * Publica em TOPICO_TEMPERATURA o valor de counter com QoS 0 sem retenção;
-						 */
-				if( esp_mqtt_client_publish( client, TOPICO_TEMPERATURA, str, strlen( str ), 0, 0 ) == 0 )
-		        {
-
-		          if( BUTTON_4 )
-		            ESP_LOGI( TAG, "MSG: %s .\r\n",str);
-		            
-		          counter++;
-		        }	
-						
-						aux = 1; 
-					}
-				}
-
-		/**
-		 * Botão solto?
-		 */
-		if( gpio_get_level( BUTTON ) == 1 && aux == 1 )
-		{
-		    vTaskDelay( 80/portTICK_PERIOD_MS );	
-			
-  			if(gpio_get_level( BUTTON ) == 1 && aux == 1 )
-  			{
-  				aux = 0;
-  			}
-		}	
-    //////////////////////////////////////////////////////////////
-    // FIM BLOCO PARA O BOTÃO NO GPIO-4
-    //////////////////////////////////////////////////////////////
-
-  		/**
-  		 * Contribui para as demais tasks de menor prioridade sejam escalonadas
-  		 * pelo scheduler;
-  		 */
-  		vTaskDelay( 100/portTICK_PERIOD_MS );	
-    }
-}
-
-
 /**
  * Inicio da Aplicação;
  */
@@ -491,14 +318,4 @@ void app_main( void )
      */
     mqtt_app_start();
 
-    /*
-       Task responsável em ler e enviar valores via Socket TCP Client. 
-    */
-    if( xTaskCreate( task_button, "task_button", 10000, NULL, 1, NULL ) != pdTRUE )
-    {
-      if( DEBUG )
-         ESP_LOGI( TAG, "error - Nao foi possivel alocar task_button.\r\n" );  
-      return;   
-    }
-	
 }
