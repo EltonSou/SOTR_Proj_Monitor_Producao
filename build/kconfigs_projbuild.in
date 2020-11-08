@@ -1,0 +1,5 @@
+source "C:/VSC_ESP32_IDF_V4.1/esp-idf/components/app_update/Kconfig.projbuild"
+source "C:/VSC_ESP32_IDF_V4.1/esp-idf/components/bootloader/Kconfig.projbuild"
+source "C:/VSC_ESP32_IDF_V4.1/esp-idf/components/esptool_py/Kconfig.projbuild"
+source "C:/VSC_ESP32_IDF_V4.1/esp-idf/components/partition_table/Kconfig.projbuild"
+source "C:/VSC_ESP32_IDF_V3.3.4/esp-idf/Projetos/MQTT01_TESTE/main/Kconfig.projbuild"

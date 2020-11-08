@@ -1,0 +1,13 @@
+# Target labels
+ bootloader
+# Source files and their labels
+C:/VSC_ESP32_IDF_V3.3.4/esp-idf/Projetos/MQTT01_TESTE/build/CMakeFiles/bootloader
+C:/VSC_ESP32_IDF_V3.3.4/esp-idf/Projetos/MQTT01_TESTE/build/CMakeFiles/bootloader.rule
+C:/VSC_ESP32_IDF_V3.3.4/esp-idf/Projetos/MQTT01_TESTE/build/CMakeFiles/bootloader-complete.rule
+C:/VSC_ESP32_IDF_V3.3.4/esp-idf/Projetos/MQTT01_TESTE/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+C:/VSC_ESP32_IDF_V3.3.4/esp-idf/Projetos/MQTT01_TESTE/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+C:/VSC_ESP32_IDF_V3.3.4/esp-idf/Projetos/MQTT01_TESTE/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+C:/VSC_ESP32_IDF_V3.3.4/esp-idf/Projetos/MQTT01_TESTE/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule
+C:/VSC_ESP32_IDF_V3.3.4/esp-idf/Projetos/MQTT01_TESTE/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+C:/VSC_ESP32_IDF_V3.3.4/esp-idf/Projetos/MQTT01_TESTE/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+C:/VSC_ESP32_IDF_V3.3.4/esp-idf/Projetos/MQTT01_TESTE/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
