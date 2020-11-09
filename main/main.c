@@ -304,6 +304,8 @@ void gpioTask ( void *pvParameter ) {
 
     uint32_t gpio_num = 0;
 
+    gpioInit();
+
     while( 1 ){
 
         if( xQueueReceive( gpio_event_queue, &gpio_num, portMAX_DELAY ) ) {
@@ -387,8 +389,6 @@ void app_main( void )
       ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
-
-    gpioInit();
     
     /*
        Event Group do FreeRTOS. 
@@ -430,8 +430,5 @@ void app_main( void )
             return;
         }
     }
-
-    
-    
 
 }
