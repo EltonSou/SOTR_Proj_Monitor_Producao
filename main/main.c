@@ -8,63 +8,24 @@
   Turma: 7SE- Sábado de manhã
 */
 
-/**
- * Lib C
- */
-#include <stdio.h>
-#include <stdint.h>
-#include <stddef.h>
-#include <string.h>
-
-/**
- * FreeRTOS
- */
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
-#include "freertos/queue.h"
-#include "freertos/event_groups.h"
-
-/**
- * WiFi
- */
-#include "esp_wifi.h"
-
-/**
- * WiFi Callback
- */
-#include "esp_event_loop.h"
-
-/**
- * Log
- */
-#include "esp_system.h"
-#include "esp_log.h"
-
-/**
- * NVS
- */
-#include "nvs.h"
-#include "nvs_flash.h"
-
-/**
- * LWIP
- */
-#include "lwip/sockets.h"
-#include "lwip/dns.h"
-#include "lwip/netdb.h"
-
-/**
- * Lib MQTT
- */
-#include "mqtt_client.h"
+#include "main.h"
 
 /**
  * Definições Gerais
  */
-#define DEBUG 1
-#define CONFIG_WIFI_SSID        "Alho_Home"
-#define CONFIG_WIFI_PASSWORD    "P!nn@pl#"
+
+tipoS Fsm[6] = {
+                  [Alimenta] = {0,1000,Esquenta},
+                  [Esquenta] = {0,1000,Injeta},
+                  [Injeta] = {0,1000,Molda},
+                  [Molda] = {0,1000,Esfria},
+                  [Esfria] = {0,1000,Dispensa},
+                  [Dispensa] = {0,1000,Alimenta},
+               };
+
+Maquina injetora;
+
+uint8_t nomeMaquina[] = "Injetora";
 
 /**
  * Variáveis Globais
@@ -274,11 +235,34 @@ static void wifi_init_sta( void )
 
 }
 
+void machineTask ( void *pvParameter ) {
+
+    injetora.id = nomeMaquina;
+    injetora.tempoDeCiclo = 6000; // em mili segundos
+    injetora.sensorFimCiclo = OFF;
+    injetora.sensorMaquinaParada = OFF;
+    injetora.sensorMaquinaDesligada = OFF;
+    injetora.fsm = Fsm;
+    injetora.actualState = Alimenta;
+   
+    while( 1 ){
+
+        executaMaquina( &injetora);
+
+        vTaskDelay( pdMS_TO_TICKS( 100 ) );
+
+    }
+
+    vTaskDelete( NULL );
+
+}
+
 /**
  * Inicio da Aplicação;
  */
 void app_main( void )
 {
+
     /*
     Inicialização da memória não volátil para armazenamento de dados (Non-volatile storage (NVS)).
     **Necessário para realização da calibração do PHY. 
@@ -317,5 +301,12 @@ void app_main( void )
      * Inicializa e configura a rede;
      */
     mqtt_app_start();
+
+    if( xTaskCreate( machineTask, "machineTask", 2048, NULL, 1, NULL) ) {
+        if( DEBUG ) {
+            ESP_LOGI(TAG,"error - Nao foi possivel alocar machineTask\r\n");
+            return;
+        }
+    }
 
 }
