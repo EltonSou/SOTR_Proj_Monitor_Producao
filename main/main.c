@@ -235,25 +235,138 @@ static void wifi_init_sta( void )
 
 }
 
+/*
+ * Task para gerenciar a máquina operando
+ */
+
+void iniciaMaquina ( Maquina *maq){
+    maq->id = nomeMaquina;
+    maq->tempoDeCiclo = 6000; // em mili segundos
+    maq->sensorFimCiclo = OFF;
+    maq->sensorMaquinaParada = OFF;
+    maq->sensorMaquinaDesligada = OFF;
+    maq->fsm = Fsm;
+    maq->actualState = Alimenta;
+}
+
 void machineTask ( void *pvParameter ) {
 
-    injetora.id = nomeMaquina;
-    injetora.tempoDeCiclo = 6000; // em mili segundos
-    injetora.sensorFimCiclo = OFF;
-    injetora.sensorMaquinaParada = OFF;
-    injetora.sensorMaquinaDesligada = OFF;
-    injetora.fsm = Fsm;
-    injetora.actualState = Alimenta;
+    iniciaMaquina( &injetora );
    
     while( 1 ){
 
         executaMaquina( &injetora);
 
-        vTaskDelay( pdMS_TO_TICKS( 100 ) );
+        vTaskDelay( pdMS_TO_TICKS( 1000 ) );
 
     }
 
     vTaskDelete( NULL );
+
+}
+
+/*
+ * Configuração do GPIO de entrada da máquina
+ */
+
+static xQueueHandle gpio_event_queue = NULL;
+
+static void gpio_isr_handler( void* arg ){
+
+    uint32_t gpio_num = ( uint32_t )arg;
+
+    xQueueSendFromISR( gpio_event_queue, &gpio_num, NULL );    
+
+}
+
+void gpioInit ( void ){
+  gpio_config_t gpioInputConfig;
+
+    // Configuro os GPIO_0 e GPIO_4 como entrada, pull-up ligado e interrupção com borda de subida
+    gpioInputConfig.pin_bit_mask = (1ULL << BOTAO_DESLIGA_MAQUINA) | (1ULL << BOTAO_PARADA_EMERGENCIA_MAQUINA);
+    gpioInputConfig.mode = GPIO_MODE_INPUT;
+    gpioInputConfig.pull_up_en = GPIO_PULLUP_ENABLE;
+    gpioInputConfig.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    gpioInputConfig.intr_type = GPIO_INTR_POSEDGE;
+
+    gpio_config(&gpioInputConfig);
+
+    gpio_event_queue = xQueueCreate(1,sizeof(uint32_t));
+
+    gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
+
+    gpio_isr_handler_add(BOTAO_DESLIGA_MAQUINA, gpio_isr_handler,(void*)BOTAO_DESLIGA_MAQUINA);
+    
+    gpio_isr_handler_add(BOTAO_PARADA_EMERGENCIA_MAQUINA, gpio_isr_handler,(void*)BOTAO_PARADA_EMERGENCIA_MAQUINA);
+}
+
+void gpioTask ( void *pvParameter ) {
+
+    uint32_t gpio_num = 0;
+
+    while( 1 ){
+
+        if( xQueueReceive( gpio_event_queue, &gpio_num, portMAX_DELAY ) ) {
+
+            if( gpio_get_level(gpio_num) == 1) {
+
+                vTaskDelay(pdMS_TO_TICKS(50));
+
+                if( gpio_get_level(gpio_num) == 1) {
+
+                    if( DEBUG ){
+
+                        ESP_LOGI( TAG, "Button: %d value: %d", gpio_num, gpio_get_level( gpio_num ) );
+
+                    }
+
+                    switch(gpio_num){
+                      case BOTAO_DESLIGA_MAQUINA:
+                        
+                        if(injetora.sensorMaquinaDesligada == ON){
+
+                            injetora.sensorMaquinaDesligada = OFF;
+
+                            //iniciaMaquina( &injetora );
+
+                        }
+                        else{
+
+                            iniciaMaquina( &injetora );
+
+                            injetora.sensorMaquinaDesligada = ON;                    
+
+                        }
+                        
+                      break;
+                      case BOTAO_PARADA_EMERGENCIA_MAQUINA:
+
+                        if(injetora.sensorMaquinaDesligada == OFF){
+
+                            if(injetora.sensorMaquinaParada == ON){
+
+                                injetora.sensorMaquinaParada = OFF;
+
+                            }
+                            else{
+                                injetora.sensorMaquinaParada = ON;
+                            }
+
+                        }
+                        
+                      break;
+                    }
+                }
+
+            }
+
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+
+    }
+
+    vTaskDelete(NULL);
 
 }
 
@@ -275,6 +388,8 @@ void app_main( void )
     }
     ESP_ERROR_CHECK(ret);
 
+    gpioInit();
+    
     /*
        Event Group do FreeRTOS. 
        Só podemos enviar ou ler alguma informação TCP quando a rede WiFi estiver configurada, ou seja, 
@@ -302,11 +417,21 @@ void app_main( void )
      */
     mqtt_app_start();
 
-    if( xTaskCreate( machineTask, "machineTask", 2048, NULL, 1, NULL) ) {
+    if( (xTaskCreate( gpioTask, "gpioTask", 2048, NULL, 1, NULL) != pdTRUE) ) {
+        if( DEBUG ) {
+            ESP_LOGI(TAG,"error - Nao foi possivel alocar gpioTask\r\n");
+            return;
+        }
+    }
+
+    if( (xTaskCreate( machineTask, "machineTask", 2048, NULL, 1, NULL) != pdTRUE) ) {
         if( DEBUG ) {
             ESP_LOGI(TAG,"error - Nao foi possivel alocar machineTask\r\n");
             return;
         }
     }
+
+    
+    
 
 }

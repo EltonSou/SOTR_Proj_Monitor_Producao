@@ -22,6 +22,11 @@
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
 
+/*
+ * GPIO
+ */
+#include "driver/gpio.h"
+
 /**
  * WiFi
  */

@@ -10,30 +10,43 @@ uint8_t estadosMsg[ESTADOS_MAX][30] = {
         };
 
 void executaMaquina ( Maquina *maq) {
-      
+           
     if(DEBUG){
         ESP_LOGI("","\rMaquina: %s                 \n \
-                     \rTempo de ciclo: %d          \n \
-                     \rSensor Fim Ciclo: %d        \n \
-                     \rSensor Maquina Parada: %d   \n \
-                     \rSensor Maquina Desligada: %d\n \
-                     \rEstado atual: %s            \n \
-                     \rSaida injetora: %d          \n \
-                     \rEspera: %d                  \n\
-                     \rProximo: %s                 \n",
-                     maq->id,
-                     maq->tempoDeCiclo,
-                     maq->sensorFimCiclo,
-                     maq->sensorMaquinaParada,
-                     maq->sensorMaquinaDesligada,
-                     &estadosMsg[maq->actualState][0],
-                     maq->fsm[maq->actualState].out,
-                     maq->fsm[maq->actualState].wait,
-                     &estadosMsg[maq->fsm[maq->actualState].next][0]);
+                    \rTempo de ciclo: %d          \n \
+                    \rSensor Fim Ciclo: %d        \n \
+                    \rSensor Maquina Parada: %d   \n \
+                    \rSensor Maquina Desligada: %d\n \
+                    \rEstado atual: %s            \n \
+                    \rSaida injetora: %d          \n \
+                    \rEspera: %d                  \n\
+                    \rProximo: %s                 \n",
+                    maq->id,
+                    maq->tempoDeCiclo,
+                    maq->sensorFimCiclo,
+                    maq->sensorMaquinaParada,
+                    maq->sensorMaquinaDesligada,
+                    &estadosMsg[maq->actualState][0],
+                    maq->fsm[maq->actualState].out,
+                    maq->fsm[maq->actualState].wait,
+                    &estadosMsg[maq->fsm[maq->actualState].next][0]);
+    }    
+
+    if(maq->sensorMaquinaDesligada == OFF){ 
+
+        vTaskDelay(pdMS_TO_TICKS(maq->fsm[maq->actualState].wait));
+
+        if( maq->sensorMaquinaParada == OFF ){
+            maq->actualState = maq->fsm[maq->actualState].next;
+        }
+
+        if( maq->actualState == Dispensa ) {
+            maq->sensorFimCiclo = ON;
+        }
+        else{
+            maq->sensorFimCiclo = OFF;
+        }
+        
     }
-
-    vTaskDelay(pdMS_TO_TICKS(maq->fsm[maq->actualState].wait));
-
-    maq->actualState = maq->fsm[maq->actualState].next;
 }
 
