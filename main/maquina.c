@@ -9,8 +9,10 @@ uint8_t estadosMsg[ESTADOS_MAX][30] = {
             [Dispensa] = "Dispensa",
         };
 
-void executaMaquina ( Maquina *maq) {
-           
+void executaMaquina ( Maquina *maq, xQueueHandle *queueHandle) {
+
+    machineEvent novoEvento;
+
     if(DEBUG){
         ESP_LOGI("","\rMaquina: %s                 \n \
                     \rTempo de ciclo: %d          \n \
@@ -25,14 +27,38 @@ void executaMaquina ( Maquina *maq) {
                     maq->tempoDeCiclo,
                     maq->sensorFimCiclo,
                     maq->sensorMaquinaParada,
-                    maq->sensorMaquinaDesligada,
+                    maq->sensorMaquinaLigada,
                     &estadosMsg[maq->actualState][0],
                     maq->fsm[maq->actualState].out,
                     maq->fsm[maq->actualState].wait,
                     &estadosMsg[maq->fsm[maq->actualState].next][0]);
     }    
 
-    if(maq->sensorMaquinaDesligada == OFF){ 
+    // Bloco que carrega informações na fila de monitoramento
+    
+    novoEvento.eventId = TEMPO_DE_CICLO;
+    novoEvento.value   = maq->tempoDeCiclo;
+
+    xQueueSend(*queueHandle, &novoEvento, portMAX_DELAY);
+
+    novoEvento.eventId = SENSOR_FIM_CICLO;
+    novoEvento.value   = maq->sensorFimCiclo;
+
+    xQueueSend(*queueHandle, &novoEvento, portMAX_DELAY);
+
+    novoEvento.eventId = SENSOR_MAQ_DESLIGADA;
+    novoEvento.value   = maq->sensorMaquinaLigada;
+
+    xQueueSend(*queueHandle, &novoEvento, portMAX_DELAY);
+
+    novoEvento.eventId = SENSOR_MAQ_PARADA;
+    novoEvento.value   = maq->sensorMaquinaParada;
+
+    xQueueSend(*queueHandle, &novoEvento, portMAX_DELAY);
+
+    ////////////////////////////////////////////////////////////////////
+
+    if(maq->sensorMaquinaLigada == ON){ 
 
         vTaskDelay(pdMS_TO_TICKS(maq->fsm[maq->actualState].wait));
 

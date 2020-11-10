@@ -68,6 +68,11 @@
 #include "fsm.h"
 #include "maquina.h"
 
+/*
+ * Protocolo de comunicação com o sistema Syntera da AutomaWay
+ */
+#include "syntera.h"
+
 #ifdef __cplusplus
     }
 #endif

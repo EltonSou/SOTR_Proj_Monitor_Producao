@@ -8,7 +8,8 @@
 		"files.associations": {
 			"maquina.h": "c",
 			"fsm.h": "c",
-			"main.h": "c"
+			"main.h": "c",
+			"string.h": "c"
 		}
 	}
 }

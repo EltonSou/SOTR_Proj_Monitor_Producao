@@ -17,9 +17,9 @@
 tipoS Fsm[6] = {
                   [Alimenta] = {0,1000,Esquenta},
                   [Esquenta] = {0,1000,Injeta},
-                  [Injeta] = {0,1000,Molda},
-                  [Molda] = {0,1000,Esfria},
-                  [Esfria] = {0,1000,Dispensa},
+                  [Injeta]   = {0,1000,Molda},
+                  [Molda]    = {0,1000,Esfria},
+                  [Esfria]   = {0,1000,Dispensa},
                   [Dispensa] = {0,1000,Alimenta},
                };
 
@@ -244,24 +244,98 @@ void iniciaMaquina ( Maquina *maq){
     maq->tempoDeCiclo = 6000; // em mili segundos
     maq->sensorFimCiclo = OFF;
     maq->sensorMaquinaParada = OFF;
-    maq->sensorMaquinaDesligada = OFF;
+    maq->sensorMaquinaLigada = ON;
     maq->fsm = Fsm;
     maq->actualState = Alimenta;
 }
 
+xQueueHandle machine_event_queue = NULL;
+
 void machineTask ( void *pvParameter ) {
 
-    iniciaMaquina( &injetora );
+    iniciaMaquina( &injetora);
    
     while( 1 ){
 
-        executaMaquina( &injetora);
+        executaMaquina( &injetora, &machine_event_queue);
 
         vTaskDelay( pdMS_TO_TICKS( 1000 ) );
 
     }
 
     vTaskDelete( NULL );
+
+}
+
+void machineMonitor ( void *pvParameter){
+
+    machineEvent eventoRecebido;
+
+    uint32_t pecasProduzidas = 0;
+
+    volatile SynteraMsg mensagem_servidor;
+
+    mensagem_servidor.numOperacao = 17631;
+    mensagem_servidor.numPecas = 0;
+    mensagem_servidor.tempoDePeca;
+    mensagem_servidor.statusMaqParada = OFF;
+    mensagem_servidor.perdaAutomatica = 0;
+
+    mensagem_servidor.statusCartao[0] = 'C';
+    mensagem_servidor.statusCartao[1] = 'A';
+    mensagem_servidor.statusCartao[2] = 'R';
+    mensagem_servidor.statusCartao[3] = 'O';
+    mensagem_servidor.statusCartao[4] = 'K';
+    mensagem_servidor.statusCartao[5] = 0;
+
+    mensagem_servidor.statusMaqLigada = OFF;
+
+    while( 1 ) {
+
+        xQueueReceive( machine_event_queue, &eventoRecebido, portMAX_DELAY);
+
+        switch( eventoRecebido.eventId ){
+            case TEMPO_DE_CICLO:
+                mensagem_servidor.tempoDePeca = eventoRecebido.value;
+            break;
+            case SENSOR_MAQ_PARADA:
+                mensagem_servidor.statusMaqParada = eventoRecebido.value;
+            break;
+            case SENSOR_MAQ_DESLIGADA:
+                mensagem_servidor.statusMaqLigada = eventoRecebido.value;
+            break;
+            case SENSOR_FIM_CICLO:
+                // Detecta sensor ON e incrementa peças produzidas
+                if(eventoRecebido.value == ON){
+                    pecasProduzidas++;  // Mais uma peça foi produzida
+                }
+                mensagem_servidor.numPecas = pecasProduzidas;
+            break;
+        }
+
+        // Funcao que envia a mensagem
+        if(DEBUG || DEBUG_MACHINE_MONITOR){
+            ESP_LOGI( TAG, "\n\n\rSyntera - AutomaWay Sistemas \
+                            \n\rNumero da operacao: %d       \
+                            \n\rNumero de pecas: %d          \
+                            \n\rTempo de peca: %d            \
+                            \n\rMaquina parada: %d           \
+                            \n\rPerda automatica: %d         \
+                            \n\rStatus Cartao: CAROK         \
+                            \n\rMaquina ligada: %d          ",
+                                mensagem_servidor.numOperacao,
+                                mensagem_servidor.numPecas,
+                                mensagem_servidor.tempoDePeca,
+                                mensagem_servidor.statusMaqParada,
+                                mensagem_servidor.perdaAutomatica,                                
+                                mensagem_servidor.statusMaqLigada);
+        }
+
+        vTaskDelay( pdMS_TO_TICKS( 200 ) );
+
+    }
+
+    vTaskDelete(NULL);
 
 }
 
@@ -304,8 +378,6 @@ void gpioTask ( void *pvParameter ) {
 
     uint32_t gpio_num = 0;
 
-    gpioInit();
-
     while( 1 ){
 
         if( xQueueReceive( gpio_event_queue, &gpio_num, portMAX_DELAY ) ) {
@@ -325,25 +397,25 @@ void gpioTask ( void *pvParameter ) {
                     switch(gpio_num){
                       case BOTAO_DESLIGA_MAQUINA:
                         
-                        if(injetora.sensorMaquinaDesligada == ON){
+                        if(injetora.sensorMaquinaLigada == ON){
 
-                            injetora.sensorMaquinaDesligada = OFF;
+                            iniciaMaquina( &injetora );
 
-                            //iniciaMaquina( &injetora );
+                            injetora.sensorMaquinaLigada = OFF;                           
 
                         }
                         else{
 
-                            iniciaMaquina( &injetora );
+                            //iniciaMaquina( &injetora );
 
-                            injetora.sensorMaquinaDesligada = ON;                    
+                            injetora.sensorMaquinaLigada = ON;                    
 
                         }
                         
                       break;
                       case BOTAO_PARADA_EMERGENCIA_MAQUINA:
 
-                        if(injetora.sensorMaquinaDesligada == OFF){
+                        if(injetora.sensorMaquinaLigada == OFF){
 
                             if(injetora.sensorMaquinaParada == ON){
 
@@ -377,6 +449,8 @@ void gpioTask ( void *pvParameter ) {
  */
 void app_main( void )
 {
+
+    gpioInit();
 
     /*
     Inicialização da memória não volátil para armazenamento de dados (Non-volatile storage (NVS)).
@@ -424,11 +498,20 @@ void app_main( void )
         }
     }
 
+    machine_event_queue = xQueueCreate(10,sizeof(machineEvent));
+
     if( (xTaskCreate( machineTask, "machineTask", 2048, NULL, 1, NULL) != pdTRUE) ) {
-        if( DEBUG ) {
+        if( DEBUG ) {   
             ESP_LOGI(TAG,"error - Nao foi possivel alocar machineTask\r\n");
             return;
         }
     }
+
+    if( (xTaskCreate( machineMonitor, "machineMonitor", 2048, NULL, 1, NULL) != pdTRUE) ) {
+        if( DEBUG ) {
+            ESP_LOGI(TAG,"error - Nao foi possivel alocar machineTask\r\n");
+            return;
+        }
+    }    
 
 }

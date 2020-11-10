@@ -25,14 +25,28 @@
             uint32_t tempoDeCiclo;
             uint32_t sensorFimCiclo;
             uint32_t sensorMaquinaParada;
-            uint32_t sensorMaquinaDesligada;
+            uint32_t sensorMaquinaLigada;
             tipoS *fsm;
             uint32_t actualState; 
         };
 
         typedef struct Maq Maquina;
 
-        void executaMaquina ( Maquina *maq);
+        enum {
+            TEMPO_DE_CICLO = 0,
+            SENSOR_FIM_CICLO,
+            SENSOR_MAQ_PARADA,
+            SENSOR_MAQ_DESLIGADA,
+        }machineEventNumber;
+
+        struct maqEvent{
+            uint8_t eventId;
+            uint32_t value;
+        };
+
+        typedef struct maqEvent machineEvent;
+
+        void executaMaquina ( Maquina *maq, xQueueHandle *queueHandle);
 
     #ifdef __cplusplus
     }
