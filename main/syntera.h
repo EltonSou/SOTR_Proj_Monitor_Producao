@@ -15,6 +15,7 @@
         uint8_t perdaAutomatica;
         uint8_t statusCartao[6];
         uint8_t statusMaqLigada;
+        const char *topicoMQTT;
     };
 
     typedef struct synteraMsg SynteraMsg;

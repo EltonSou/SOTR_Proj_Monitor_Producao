@@ -165,7 +165,7 @@ static void mqtt_app_start( void )
      * Sem SSL/TLS
      */
     const esp_mqtt_client_config_t mqtt_cfg = {  		
-      .uri = "mqtt://mqtt.automaway.com.br:1883",
+      .uri = BROKER_MQTT,
       .event_handle = mqtt_event_handler,
   		.username = "teste",
   		.password = "teste",
@@ -269,6 +269,8 @@ void machineTask ( void *pvParameter ) {
 
 void machineMonitor ( void *pvParameter){
 
+    char str[20];
+
     machineEvent eventoRecebido;
 
     uint32_t pecasProduzidas = 0;
@@ -290,6 +292,10 @@ void machineMonitor ( void *pvParameter){
 
     mensagem_servidor.statusMaqLigada = OFF;
 
+    mensagem_servidor.topicoMQTT = "OPANDAMENTO/1/192.168.0.10";
+
+    nvsFlashRead(&pecasProduzidas,"num_pecas", "storage");
+
     while( 1 ) {
 
         xQueueReceive( machine_event_queue, &eventoRecebido, portMAX_DELAY);
@@ -307,7 +313,11 @@ void machineMonitor ( void *pvParameter){
             case SENSOR_FIM_CICLO:
                 // Detecta sensor ON e incrementa peças produzidas
                 if(eventoRecebido.value == ON){
+
                     pecasProduzidas++;  // Mais uma peça foi produzida
+
+                    nvsFlashSave(pecasProduzidas,"num_pecas","storage");
+
                 }
                 mensagem_servidor.numPecas = pecasProduzidas;
             break;
@@ -330,6 +340,22 @@ void machineMonitor ( void *pvParameter){
                                 mensagem_servidor.perdaAutomatica,                                
                                 mensagem_servidor.statusMaqLigada);
         }
+
+        sprintf( str,"%d_%d_%d_%d_%d_CAROK_%d",
+                    mensagem_servidor.numOperacao,
+                    mensagem_servidor.numPecas,
+                    mensagem_servidor.tempoDePeca,
+                    mensagem_servidor.statusMaqParada,
+                    mensagem_servidor.perdaAutomatica,                                
+                    mensagem_servidor.statusMaqLigada);
+
+        if( esp_mqtt_client_publish( client, "OPANDAMENTO/1/192.168.0.10", str, strlen( str ), 0, 0 ) == 0 )
+        {
+
+            if( DEBUG )
+            ESP_LOGI( TAG, "MSG: %s .\r\n",str);
+            
+        }	
 
         vTaskDelay( pdMS_TO_TICKS( 200 ) );
 
@@ -415,7 +441,7 @@ void gpioTask ( void *pvParameter ) {
                       break;
                       case BOTAO_PARADA_EMERGENCIA_MAQUINA:
 
-                        if(injetora.sensorMaquinaLigada == OFF){
+                        if(injetora.sensorMaquinaLigada == ON){
 
                             if(injetora.sensorMaquinaParada == ON){
 
@@ -452,18 +478,10 @@ void app_main( void )
 
     gpioInit();
 
-    /*
-    Inicialização da memória não volátil para armazenamento de dados (Non-volatile storage (NVS)).
-    **Necessário para realização da calibração do PHY. 
-    */
-    esp_err_t ret = nvs_flash_init();
-    nvs_flash_erase();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES) {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
-    
+    nvsFlashInit();
+
+   // ESP_LOGI(TAG,"Valor de var: %d", var);
+
     /*
        Event Group do FreeRTOS. 
        Só podemos enviar ou ler alguma informação TCP quando a rede WiFi estiver configurada, ou seja, 

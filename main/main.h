@@ -49,6 +49,9 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 
+// Biblioteca personalizada (necessita de nvs.h e nvs_flash.h, por isso está embaixo)
+#include "flash.h"
+
 /**
  * LWIP
  */

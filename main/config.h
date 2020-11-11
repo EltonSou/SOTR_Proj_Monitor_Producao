@@ -10,9 +10,10 @@
 /**
  * Definições Gerais
  */
-#define DEBUG 0
-#define DEBUG_MACHINE_MONITOR 1
+#define DEBUG 1
+#define DEBUG_MACHINE_MONITOR 0
 
+#define BROKER_MQTT             "mqtt://mqtt.automaway.com.br:1883"
 #define CONFIG_WIFI_SSID        "SOLARFLATHOTEL"
 #define CONFIG_WIFI_PASSWORD    "solar@2019"
 //#define CONFIG_WIFI_SSID        "Alho_Home"
