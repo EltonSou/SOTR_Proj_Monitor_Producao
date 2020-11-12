@@ -8,8 +8,8 @@
     #include "main.h"
 
     void nvsFlashInit(void);
-    BaseType_t nvsFlashRead(uint32_t *value, const char *value_name, const char *storage_name);
-    BaseType_t nvsFlashSave(uint32_t value, const char *value_name, const char *storage_name);
+    BaseType_t nvsFlashRead(int32_t *valor);
+    BaseType_t nvsFlashSave(int32_t valor);
 
 #ifdef __cplusplus
     }

@@ -1,4 +1,5 @@
 /*
+
   Autor: Vitor M. dos S. Alho
   Autor: Elton G. Souza
   Hardware: ESP32
@@ -6,6 +7,9 @@
   Disciplina: Sistema Operacional de Tempo Real (SOTR)
   Professor: Fernando Simplício
   Turma: 7SE- Sábado de manhã
+
+  Projeto: Monitoramento de máquina industrial para controle de produção.
+
 */
 
 #include "main.h"
@@ -14,26 +18,31 @@
  * Definições Gerais
  */
 
-tipoS Fsm[6] = {
-                  [Alimenta] = {0,1000,Esquenta},
-                  [Esquenta] = {0,1000,Injeta},
-                  [Injeta]   = {0,1000,Molda},
-                  [Molda]    = {0,1000,Esfria},
-                  [Esfria]   = {0,1000,Dispensa},
-                  [Dispensa] = {0,1000,Alimenta},
+tipoS Fsm[ 6 ] = {
+                  [ Alimenta ] = { 0, 1000, Esquenta },
+                  [ Esquenta ] = { 0, 1000, Injeta },
+                  [ Injeta ]   = { 0, 1000, Molda },
+                  [ Molda ]    = { 0, 1000, Esfria },
+                  [ Esfria ]   = { 0, 1000, Dispensa },
+                  [ Dispensa ] = { 0, 1000, Alimenta },
                };
+
+/**
+ * Variáveis Globais
+ */
 
 Maquina injetora;
 
 uint8_t nomeMaquina[] = "Injetora";
 
-/**
- * Variáveis Globais
- */
 static const char *TAG = "main: ";
+
 static EventGroupHandle_t wifi_event_group;
+
 static EventGroupHandle_t mqtt_event_group;
+
 const static int CONNECTED_BIT = BIT0;
+
 esp_mqtt_client_handle_t client;
 
 /**
@@ -239,7 +248,7 @@ static void wifi_init_sta( void )
  * Task para gerenciar a máquina operando
  */
 
-void iniciaMaquina ( Maquina *maq){
+void iniciaMaquina ( Maquina *maq ){
     maq->id = nomeMaquina;
     maq->tempoDeCiclo = 6000; // em mili segundos
     maq->sensorFimCiclo = OFF;
@@ -253,11 +262,11 @@ xQueueHandle machine_event_queue = NULL;
 
 void machineTask ( void *pvParameter ) {
 
-    iniciaMaquina( &injetora);
+    iniciaMaquina( &injetora );
    
     while( 1 ){
 
-        executaMaquina( &injetora, &machine_event_queue);
+        executaMaquina( &injetora, &machine_event_queue );
 
         vTaskDelay( pdMS_TO_TICKS( 1000 ) );
 
@@ -273,11 +282,11 @@ void machineMonitor ( void *pvParameter){
 
     machineEvent eventoRecebido;
 
-    uint32_t pecasProduzidas = 0;
+    int32_t pecasProduzidas = 0;
 
     volatile SynteraMsg mensagem_servidor;
 
-    mensagem_servidor.numOperacao = 17631;
+    mensagem_servidor.numOperacao = NUMERO_OP;
     mensagem_servidor.numPecas = 0;
     mensagem_servidor.tempoDePeca;
     mensagem_servidor.statusMaqParada = OFF;
@@ -292,9 +301,14 @@ void machineMonitor ( void *pvParameter){
 
     mensagem_servidor.statusMaqLigada = OFF;
 
-    mensagem_servidor.topicoMQTT = "OPANDAMENTO/1/192.168.0.10";
+    mensagem_servidor.topicoMQTT = TOPICO_MQTT;
 
-    nvsFlashRead(&pecasProduzidas,"num_pecas", "storage");
+    //nvsFlashRead(&pecasProduzidas,"num_pecas", "storage");
+    nvsFlashRead(&pecasProduzidas);
+
+    printf("Valor de var: %d",pecasProduzidas);
+
+    mensagem_servidor.numPecas = pecasProduzidas;
 
     while( 1 ) {
 
@@ -316,7 +330,7 @@ void machineMonitor ( void *pvParameter){
 
                     pecasProduzidas++;  // Mais uma peça foi produzida
 
-                    nvsFlashSave(pecasProduzidas,"num_pecas","storage");
+                    nvsFlashSave(pecasProduzidas);
 
                 }
                 mensagem_servidor.numPecas = pecasProduzidas;
@@ -349,7 +363,7 @@ void machineMonitor ( void *pvParameter){
                     mensagem_servidor.perdaAutomatica,                                
                     mensagem_servidor.statusMaqLigada);
 
-        if( esp_mqtt_client_publish( client, "OPANDAMENTO/1/192.168.0.10", str, strlen( str ), 0, 0 ) == 0 )
+        if( esp_mqtt_client_publish( client, mensagem_servidor.topicoMQTT, str, strlen( str ), 0, 0 ) == 0 )
         {
 
             if( DEBUG )
@@ -475,11 +489,27 @@ void gpioTask ( void *pvParameter ) {
  */
 void app_main( void )
 {
-
+    
     gpioInit();
 
     nvsFlashInit();
 
+    //nvsFlashSave(50);
+//    nvsFlashRead(&var);
+
+ //   printf("Valor de var: %d",var);
+/*
+    printf("\n");
+
+    // Restart module
+    for (int i = 10; i >= 0; i--) {
+        printf("Restarting in %d seconds...\n", i);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+    printf("Restarting now.\n");
+    fflush(stdout);
+    esp_restart();
+*/
    // ESP_LOGI(TAG,"Valor de var: %d", var);
 
     /*

@@ -11,9 +11,16 @@
  * Definições Gerais
  */
 #define DEBUG 1
+#define DEBUG_MACHINE 0
 #define DEBUG_MACHINE_MONITOR 0
 
+/*
+ * Configurações fornecidas pela AutomaWay
+ */ 
 #define BROKER_MQTT             "mqtt://mqtt.automaway.com.br:1883"
+#define TOPICO_MQTT             "OPANDAMENTO/1/192.168.0.14"
+#define NUMERO_OP               18117
+
 #define CONFIG_WIFI_SSID        "SOLARFLATHOTEL"
 #define CONFIG_WIFI_PASSWORD    "solar@2019"
 //#define CONFIG_WIFI_SSID        "Alho_Home"

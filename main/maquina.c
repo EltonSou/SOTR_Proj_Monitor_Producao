@@ -13,7 +13,7 @@ void executaMaquina ( Maquina *maq, xQueueHandle *queueHandle) {
 
     machineEvent novoEvento;
 
-    if(DEBUG){
+    if(DEBUG || DEBUG_MACHINE){
         ESP_LOGI("","\rMaquina: %s                 \n \
                     \rTempo de ciclo: %d          \n \
                     \rSensor Fim Ciclo: %d        \n \
