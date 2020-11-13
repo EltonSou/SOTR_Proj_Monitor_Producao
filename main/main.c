@@ -245,7 +245,7 @@ static void wifi_init_sta( void )
 }
 
 /*
- * Task para gerenciar a máquina operando
+ * Task para inicialização de um objeto máquina
  */
 
 void iniciaMaquina ( Maquina *maq ){
@@ -258,8 +258,14 @@ void iniciaMaquina ( Maquina *maq ){
     maq->actualState = Alimenta;
 }
 
+/*
+ * Fila para armazenamento dos eventos da máquina virtual em execução
+ */
 xQueueHandle machine_event_queue = NULL;
 
+/*
+ * Task responsável por executar e gerenciar os estados da máquina virtual
+ */ 
 void machineTask ( void *pvParameter ) {
 
     iniciaMaquina( &injetora );
@@ -275,6 +281,14 @@ void machineTask ( void *pvParameter ) {
     vTaskDelete( NULL );
 
 }
+
+/*
+ * Task responsável por monitorar os sinais que a máquina coloca na fila
+ * Para correta sincronização do programa, como a máquina tem 4 sinais 
+ * e os transmite para a fila em uma única execução, a task de monitoramento
+ * é executada 4 vezes mais rápido para conseguir remover todo o conteúdo da 
+ * fila
+ */ 
 
 void machineMonitor ( void *pvParameter){
 
@@ -303,7 +317,6 @@ void machineMonitor ( void *pvParameter){
 
     mensagem_servidor.topicoMQTT = TOPICO_MQTT;
 
-    //nvsFlashRead(&pecasProduzidas,"num_pecas", "storage");
     nvsFlashRead(&pecasProduzidas);
 
     printf("Valor de var: %d",pecasProduzidas);
@@ -489,28 +502,15 @@ void gpioTask ( void *pvParameter ) {
  */
 void app_main( void )
 {
-    
+    /*
+       Função de inicialização do gpio e cadastro das interrupções de entrada
+    */
     gpioInit();
 
+    /*
+       Função de inicialização da memória NVS (Non Volatile flaSh)
+    */
     nvsFlashInit();
-
-    //nvsFlashSave(50);
-//    nvsFlashRead(&var);
-
- //   printf("Valor de var: %d",var);
-/*
-    printf("\n");
-
-    // Restart module
-    for (int i = 10; i >= 0; i--) {
-        printf("Restarting in %d seconds...\n", i);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-    printf("Restarting now.\n");
-    fflush(stdout);
-    esp_restart();
-*/
-   // ESP_LOGI(TAG,"Valor de var: %d", var);
 
     /*
        Event Group do FreeRTOS. 

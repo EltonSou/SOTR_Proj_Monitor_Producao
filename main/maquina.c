@@ -18,7 +18,7 @@ void executaMaquina ( Maquina *maq, xQueueHandle *queueHandle) {
                     \rTempo de ciclo: %d          \n \
                     \rSensor Fim Ciclo: %d        \n \
                     \rSensor Maquina Parada: %d   \n \
-                    \rSensor Maquina Desligada: %d\n \
+                    \rSensor Maquina Ligada: %d\n \
                     \rEstado atual: %s            \n \
                     \rSaida injetora: %d          \n \
                     \rEspera: %d                  \n\
