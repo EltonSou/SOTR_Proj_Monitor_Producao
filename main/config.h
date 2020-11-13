@@ -10,7 +10,7 @@
 /**
  * Definições Gerais
  */
-#define DEBUG 1
+#define DEBUG 0
 #define DEBUG_MACHINE 0
 #define DEBUG_MACHINE_MONITOR 0
 
